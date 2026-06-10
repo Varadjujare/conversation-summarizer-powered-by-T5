@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Summarizer App</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+            color: #f3f4f6;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.025em;
+        }
+
+        h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: center;
+            color: #818cf8;
+            margin: 0 0 16px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p {
+            font-size: 0.95rem;
+            color: #9ca3af;
+            text-align: center;
+            margin: 0 0 28px 0;
+            line-height: 1.5;
+        }
+
+        #summarization_form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 160px;
+            padding: 16px;
+            background: rgba(31, 41, 55, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #f3f4f6;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            resize: vertical;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        textarea:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            background: rgba(31, 41, 55, 0.8);
+        }
+
+        textarea::placeholder {
+            color: #6b7280;
+        }
+
+        button {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .summary_output {
+            margin-top: 32px;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        #summary_heading {
+            color: #a78bfa;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: left;
+            margin: 0 0 12px 0;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        #summary-text {
+            color: #d1d5db;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Text Summarizer</h1>
+        <h3>Using Hugging Face Transformers</h3>
+        <p>Paste your text here and click the button to get a summary</p>
+
+
+        <form id="summarization-form">
+            <textarea name="" id="dialogue-input" placeholder="Enter your Content to Summarize here..." required></textarea>
+            <button type="submit">Summarize</button>
+        </form>
+
+        <div class="summary_output">
+            <h3 id="summary_heading">Content Summary</h3>
+            <p id="summary-text">Summary Content</p>
+        </div>
+    </div>
+    <script>
+        document.getElementById("summarization-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Get references to elements
+    const dialogueInput = document.getElementById("dialogue-input");
+    const summaryText = document.getElementById("summary-text");
+    const submitButton = e.target.querySelector("button");
+
+    const dialogue = dialogueInput.value.trim();
+    if (!dialogue) return;
+
+    // Show processing message and disable button
+    summaryText.innerText = "Processing...";
+    submitButton.disabled = true;
+
+    try {
+        // Send dialogue to backend
+        const response = await fetch("/summarize/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dialogue }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        summaryText.innerText = data.summary || "No summary returned.";
+
+    } catch (err) {
+        // Show any error messages
+        summaryText.innerText = `Error: ${err.message}`;
+
+    } finally {
+        // Re-enable the button
+        submitButton.disabled = false;
+    }
+});
+    </script>
+</body>
+</html> 
